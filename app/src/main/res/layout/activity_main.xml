@@ -6,6 +6,7 @@
     android:padding="24dp">
 
 
+
     <TextView
         android:id="@+id/textView"
         android:layout_width="match_parent"
@@ -13,6 +14,12 @@
         android:text="BLE Device/Characteristic Info"
         android:textSize="18sp"
         android:padding="16dp" />
+
+    <Button
+        android:id="@+id/buttonScan"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:text="Scan for Devices" />
 
     <androidx.recyclerview.widget.RecyclerView
         android:id="@+id/deviceRecyclerView"

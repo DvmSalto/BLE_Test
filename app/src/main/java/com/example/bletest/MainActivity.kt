@@ -3,13 +3,18 @@ package com.example.bletest
 import android.Manifest
 import android.app.Activity
 import android.bluetooth.*
+import android.content.Context
+import android.content.Intent
 import android.content.pm.PackageManager
+import android.location.LocationManager
 import android.os.Bundle
 import android.os.Handler
 import android.os.Looper
+import android.provider.Settings
 import android.util.Log
 import android.widget.Button
 import android.widget.TextView
+import android.widget.Toast
 import androidx.appcompat.app.AppCompatActivity
 import androidx.core.app.ActivityCompat
 import androidx.recyclerview.widget.LinearLayoutManager
@@ -20,6 +25,7 @@ class MainActivity : AppCompatActivity() {
     private lateinit var textView: TextView
     private lateinit var buttonWrite: Button
     private lateinit var buttonRead: Button
+    private lateinit var buttonScan: Button
     private lateinit var deviceRecyclerView: RecyclerView
     private lateinit var characteristicRecyclerView: RecyclerView
 
@@ -43,14 +49,56 @@ class MainActivity : AppCompatActivity() {
         buttonRead = findViewById(R.id.buttonRead)
         deviceRecyclerView = findViewById(R.id.deviceRecyclerView)
         characteristicRecyclerView = findViewById(R.id.characteristicRecyclerView)
+        buttonScan = findViewById(R.id.buttonScan)
 
         deviceRecyclerView.layoutManager = LinearLayoutManager(this)
         characteristicRecyclerView.layoutManager = LinearLayoutManager(this)
 
         buttonWrite.setOnClickListener { writeCharacteristic() }
         buttonRead.setOnClickListener { readCharacteristic() }
+        buttonScan.setOnClickListener { startScan() }
 
-        startScan()
+        requestAllPermissions()
+    }
+
+    private fun requestAllPermissions() {
+        val permissions = mutableListOf(
+            Manifest.permission.BLUETOOTH_SCAN,
+            Manifest.permission.BLUETOOTH_CONNECT,
+            Manifest.permission.ACCESS_FINE_LOCATION,
+            Manifest.permission.ACCESS_COARSE_LOCATION
+        )
+        val toRequest = permissions.filter {
+            ActivityCompat.checkSelfPermission(this, it) != PackageManager.PERMISSION_GRANTED
+        }
+        if (toRequest.isNotEmpty()) {
+            ActivityCompat.requestPermissions(this, toRequest.toTypedArray(), 100)
+        } else {
+            checkLocationAndScan()
+        }
+    }
+
+    override fun onRequestPermissionsResult(requestCode: Int, permissions: Array<out String>, grantResults: IntArray) {
+        super.onRequestPermissionsResult(requestCode, permissions, grantResults)
+        if (requestCode == 100) {
+            if (grantResults.all { it == PackageManager.PERMISSION_GRANTED }) {
+                checkLocationAndScan()
+            } else {
+                Toast.makeText(this, "Permissions required for BLE scan", Toast.LENGTH_LONG).show()
+            }
+        }
+    }
+
+    private fun checkLocationAndScan() {
+        val locationManager = getSystemService(Context.LOCATION_SERVICE) as LocationManager
+        val isLocationEnabled = locationManager.isProviderEnabled(LocationManager.GPS_PROVIDER) ||
+                locationManager.isProviderEnabled(LocationManager.NETWORK_PROVIDER)
+        if (!isLocationEnabled) {
+            Toast.makeText(this, "Location must be enabled for BLE scan", Toast.LENGTH_LONG).show()
+            startActivity(Intent(Settings.ACTION_LOCATION_SOURCE_SETTINGS))
+        } else {
+            startScan()
+        }
     }
 
     private fun startScan() {
@@ -62,7 +110,7 @@ class MainActivity : AppCompatActivity() {
         deviceRecyclerView.adapter = adapter
 
         if (ActivityCompat.checkSelfPermission(this, Manifest.permission.BLUETOOTH_SCAN) != PackageManager.PERMISSION_GRANTED) {
-            ActivityCompat.requestPermissions(this, arrayOf(Manifest.permission.BLUETOOTH_SCAN), 2)
+            Toast.makeText(this, "Bluetooth scan permission not granted", Toast.LENGTH_SHORT).show()
             return
         }
         bluetoothAdapter?.bluetoothLeScanner?.startScan(object : android.bluetooth.le.ScanCallback() {
