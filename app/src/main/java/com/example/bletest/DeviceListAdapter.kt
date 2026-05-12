@@ -17,7 +17,8 @@ class DeviceListAdapter(
     }
     override fun onBindViewHolder(holder: DeviceViewHolder, position: Int) {
         val device = devices[position]
-        holder.textView.text = device.name ?: device.address
+        val name = device.name ?: "Unknown"
+        holder.textView.text = "$name\n${device.address}"
         holder.itemView.setOnClickListener { onClick(device) }
     }
     override fun getItemCount() = devices.size

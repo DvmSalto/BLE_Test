@@ -101,11 +101,16 @@ class MainActivity : AppCompatActivity() {
         }
     }
 
+    private var scanCallback: android.bluetooth.le.ScanCallback? = null
+
     private fun startScan() {
         foundDevices.clear()
         val adapter = DeviceListAdapter(foundDevices) { device ->
-            selectedDevice = device
-            connectToDevice(device)
+            stopScan()
+            val intent = android.content.Intent(this, DeviceDetailActivity::class.java)
+            intent.putExtra("device_address", device.address)
+            intent.putExtra("device_name", device.name ?: "Unknown")
+            startActivity(intent)
         }
         deviceRecyclerView.adapter = adapter
 
@@ -113,7 +118,7 @@ class MainActivity : AppCompatActivity() {
             Toast.makeText(this, "Bluetooth scan permission not granted", Toast.LENGTH_SHORT).show()
             return
         }
-        bluetoothAdapter?.bluetoothLeScanner?.startScan(object : android.bluetooth.le.ScanCallback() {
+        scanCallback = object : android.bluetooth.le.ScanCallback() {
             override fun onScanResult(callbackType: Int, result: android.bluetooth.le.ScanResult?) {
                 result?.device?.let { device ->
                     if (!foundDevices.any { it.address == device.address }) {
@@ -122,8 +127,16 @@ class MainActivity : AppCompatActivity() {
                     }
                 }
             }
-        })
+        }
+        bluetoothAdapter?.bluetoothLeScanner?.startScan(scanCallback)
         textView.text = "Scanning for BLE devices... Tap to connect."
+    }
+
+    private fun stopScan() {
+        if (scanCallback != null) {
+            bluetoothAdapter?.bluetoothLeScanner?.stopScan(scanCallback)
+            scanCallback = null
+        }
     }
 
     private fun connectToDevice(device: BluetoothDevice) {
